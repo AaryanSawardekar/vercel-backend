@@ -9,13 +9,14 @@ const axios = require("axios");
 require("dotenv").config();
 
 const app = express();
-const port = process.env.PORT || 5500;
+const port = process.env.PORT || 5000;
 
 app.use(
   cors({
     origin: [
       "http://localhost:5173", 
-      "https://vercel-frontend-woad.vercel.app/",
+      "https://vercel-frontend-woad.vercel.app",
+      "https://roast-my-stuff-hackathon.vercel.app"
     ],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
@@ -45,9 +46,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ 
-  storage: multer.memoryStorage() 
-});
+const upload = multer({ storage });
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -56,23 +55,24 @@ app.post("/api/roast-resume", upload.single("resume"), async (req, res) => {
   let filePath;
   try {
     if (!req.file) {
+      console.log("No file uploaded");
       return res.status(400).json({ error: "No file uploaded" });
     }
-
-
+  
     console.log("File uploaded:", req.file);
 
     const { roastLevel } = req.body;
 
     let extractedText = "";
+    filePath = req.file.path;
     const fileExt = req.file.originalname.split(".").pop().toLowerCase();
 
     if (fileExt === "pdf") {
-      const data = await pdfParse(req.file.buffer);
+      const data = await pdfParse(fs.readFileSync(filePath));
       extractedText = data.text;
       console.log("PDF text extracted:", extractedText);
     } else if (fileExt === "docx") {
-      const data = await mammoth.extractRawText({ buffer: req.file.buffer });
+      const data = await mammoth.extractRawText({ path: filePath });
       extractedText = data.value;
       console.log("DOCX text extracted:", extractedText);
     } else {
