@@ -45,7 +45,9 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage: multer.memoryStorage() 
+});
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -54,24 +56,23 @@ app.post("/api/roast-resume", upload.single("resume"), async (req, res) => {
   let filePath;
   try {
     if (!req.file) {
-      console.log("No file uploaded");
       return res.status(400).json({ error: "No file uploaded" });
     }
+
 
     console.log("File uploaded:", req.file);
 
     const { roastLevel } = req.body;
 
     let extractedText = "";
-    filePath = req.file.path;
     const fileExt = req.file.originalname.split(".").pop().toLowerCase();
 
     if (fileExt === "pdf") {
-      const data = await pdfParse(fs.readFileSync(filePath));
+      const data = await pdfParse(req.file.buffer);
       extractedText = data.text;
       console.log("PDF text extracted:", extractedText);
     } else if (fileExt === "docx") {
-      const data = await mammoth.extractRawText({ path: filePath });
+      const data = await mammoth.extractRawText({ buffer: req.file.buffer });
       extractedText = data.value;
       console.log("DOCX text extracted:", extractedText);
     } else {
